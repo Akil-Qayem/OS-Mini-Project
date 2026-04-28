@@ -73,28 +73,40 @@ The program measures enqueue and dequeue timestamps for items and also reports a
 ## Output
 Run:
 ```text
+
 === Producer-Consumer Simulation ===
 Producers: 3, Consumers: 2, Buffer Size: 10
 Each producer will generate 20 items
+=====================================
 
-[Producer-1] Produced Item 42 at index 0
-[Producer-2] Produced Item 17 at index 1
-[Consumer-1] Consumed item 42 at index 0
-[Producer-3] Produced Item 88 at index 2
-[Consumer-2] Consumed item 17 at index 1
+[Producer-1] Produced Item 27 at index 0
+[Producer-1] Produced Item 99 at index 1
+[Producer-1] Produced Item 26 at index 2
+[Producer-1] Produced Item 57 at index 3
+[Producer-1] Produced Item 56 at index 4
+[Producer-1] Produced Item 52 at index 5
+[Producer-1] Produced Item 81 at index 6
 ...
-[Producer-1] Finished producing 20 items.
-[Producer-2] Finished producing 20 items.
-[Producer-3] Finished producing 20 items.
-[Consumer-1] Received poison pill. Exiting.
+[Consumer-1] Consumed item 28 at index 7
+[Consumer-1] Consumed item 47 at index 8
+[Consumer-1] Consumed item 74 at index 9
+
+=== All producers finished ===
+Inserting 2 poison pills...
+
 [Consumer-2] Received poison pill. Exiting.
+[Consumer-2] Finished consuming 30 items.
+[Consumer-1] Received poison pill. Exiting.
+[Consumer-1] Finished consuming 30 items.
 
 === Simulation Complete ===
 Total items produced: 60
 Total items consumed: 60
 Expected items: 60
-Average latency: 0.123 ms
-Throughput: 25000.00 items/sec
+
+=== Latency Statistics ===
+Average latency: 0.031 ms
+Throughput: 175947.40 items/sec
 ```
 The exact item values, interleaving order, latency, and throughput will vary from run to run becuz thread scheduling and random number generation are nondeterministic.
 
@@ -125,6 +137,7 @@ At the end of execution, this program releases dynamically allocated memory, des
 ```bash
 sudo apt update
 sudo apt install build-essential
+git clone https://github.com/Akil-Qayem/OS-Mini-Project.git
 gcc -o producer_consumer producer_consumer.c -pthread
 ./producer_consumer 3 2 10
 ```
