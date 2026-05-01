@@ -88,29 +88,36 @@ typedef struct {
 // Removes item from buffer
 Removal_Result remove_item() {
     Removal_Result result;
-    // Try urgent first
-    if (sem_trywait(&urgent_full) == 0) {
-        pthread_mutex_lock(&mutex); // Locks the buffer to enter critical section
-        result.item = cb_urgent.buffer[cb_urgent.out];
-        result.index = cb_urgent.out;
-        result.priority = 1;
-        cb_urgent.out = (cb_urgent.out + 1) % cb_urgent.size; // Ensures Circular Implementation
-        clock_gettime(CLOCK_MONOTONIC, &cb_urgent.deq_time[result.index]); // Recording dequeue timestamp
-        pthread_mutex_unlock(&mutex); // Unlocks buffer to exit critical section
-        sem_post(&urgent_empty); // Signals that there is an empty slot
-        return result;
-    } else {
-        // Normal
-        sem_wait(&normal_full); // Waits until atleast one item is present in buffer
-        pthread_mutex_lock(&mutex); // Locks the buffer to enter critical section
-        result.item = cb_normal.buffer[cb_normal.out];
-        result.index = cb_normal.out;
-        result.priority = 0;
-        cb_normal.out = (cb_normal.out + 1) % cb_normal.size; // Ensures Circular Implementation
-        clock_gettime(CLOCK_MONOTONIC, &cb_normal.deq_time[result.index]); // Recording dequeue timestamp
-        pthread_mutex_unlock(&mutex); // Unlocks buffer to exit critical section
-        sem_post(&normal_empty); // Signals that there is an empty slot
-        return result;
+    // Loop until we successfully dequeue from either queue
+    // This avoids a deadlock where consumers block on normal_full
+    // while poison pills are waiting in the urgent queue
+    while (1) {
+        // Try urgent first (higher priority)
+        if (sem_trywait(&urgent_full) == 0) {
+            pthread_mutex_lock(&mutex); // Locks the buffer to enter critical section
+            result.item = cb_urgent.buffer[cb_urgent.out];
+            result.index = cb_urgent.out;
+            result.priority = 1;
+            cb_urgent.out = (cb_urgent.out + 1) % cb_urgent.size; // Ensures Circular Implementation
+            clock_gettime(CLOCK_MONOTONIC, &cb_urgent.deq_time[result.index]); // Recording dequeue timestamp
+            pthread_mutex_unlock(&mutex); // Unlocks buffer to exit critical section
+            sem_post(&urgent_empty); // Signals that there is an empty slot
+            return result;
+        }
+        // Try normal next
+        if (sem_trywait(&normal_full) == 0) {
+            pthread_mutex_lock(&mutex); // Locks the buffer to enter critical section
+            result.item = cb_normal.buffer[cb_normal.out];
+            result.index = cb_normal.out;
+            result.priority = 0;
+            cb_normal.out = (cb_normal.out + 1) % cb_normal.size; // Ensures Circular Implementation
+            clock_gettime(CLOCK_MONOTONIC, &cb_normal.deq_time[result.index]); // Recording dequeue timestamp
+            pthread_mutex_unlock(&mutex); // Unlocks buffer to exit critical section
+            sem_post(&normal_empty); // Signals that there is an empty slot
+            return result;
+        }
+        // Neither queue has items right now — sleep briefly to avoid busy-waiting
+        usleep(1000); // 1ms
     }
 }
 
