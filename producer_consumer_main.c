@@ -301,7 +301,7 @@ int main(int arg_count, char *arg_vec[]) {
     
     // Inserts poison pill for all the consumers
     for (int i = 0; i < num_consumers; i++) {
-        insert_item(POISON_PILL, 1);
+        insert_item(POISON_PILL, 0);
     }
     
     // Waiting for all consumers to die
