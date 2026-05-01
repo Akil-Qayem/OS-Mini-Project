@@ -137,7 +137,8 @@ Expected items: 60
 
 --- Latency Statistics ---
 Average latency: 0.140 ms
-Throughput: 27137.48 items/sec```
+Throughput: 27137.48 items/sec
+```
 The exact item values, interleaving order, latency, and throughput will vary from run to run becuz thread scheduling and random number generation are nondeterministic.
 
 ## Test Cases
