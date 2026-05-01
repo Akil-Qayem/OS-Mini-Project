@@ -1,22 +1,23 @@
 # Producer-Consumer Multithreaded Application
-In this project we created a multithreaded Producer-Consumer simulation written in C code using the POSIX `pthread` library, mutexes, and semaphores as mentioned in the rubric. It uses a circular bounded buffer to co-ordinate producer and consumer threads safely, and it terminates consumers cleanly using the Poison Pill technique.
+In this project we created a multithreaded Producer-Consumer simulation written in C code using the POSIX `pthread` library, mutexes, and semaphores as mentioned in the rubric. It uses two circular bounded buffers (urgent and normal) to co-ordinate producer and consumer threads safely with priority handling, and it terminates consumers cleanly using the Poison Pill technique.
 
 ## Overiew of the project
-The program creates a modifiable amount of producer and consumer threads. Each producer thread generates a fixed number of random integer items and then it inserts them into a circular buffer. Now, while each consumer removes items from that buffer, it then processes them by printing them onto the console. The assignment requires a circular queue, semaphore blocking for both, full and empty conditions, mutex-based mutual exclusion, and as per the rubrics, a "graceful" :) termination using 1 poison pill per consumer.
+The program creates a modifiable amount of producer and consumer threads. Each producer thread generates a fixed number of random integer items with assigned priorities (urgent or normal) and inserts them into the appropriate circular buffer. Consumers prioritize urgent items, consuming them before normal ones while maintaining FIFO order within each priority level. The assignment requires a circular queue, semaphore blocking for both full and empty conditions, mutex-based mutual exclusion, and graceful termination using 1 poison pill per consumer.
 
 ## Features added
-- Circular bounded buffer implementation. 
+- Circular bounded buffer implementation with separate urgent and normal buffers. 
+- Priority handling: items are assigned urgent (priority 1) or normal (priority 0) priority, with consumers processing urgent items first.
 - Configurable number of producers, consumers, and buffer size via command-line arguments. 
-- Synchronization using semaphores for both, empty and full slots. 
+- Synchronization using semaphores for both empty and full slots on each buffer. 
 - Using mutexes to prevent race conditions. 
 - Graceful termination using the Poison Pill technique. 
-- Input validation cehck for invalid producer, consumer, and buffer values.
+- Input validation check for invalid producer, consumer, and buffer values.
 - Latency and throughput reports to measure the performance. 
 
 ## File Name
 Save the source code as:
 ```bash
-producer_consumer.c
+producer_consumer_main.c
 ```
 
 ## Requirements to run this
@@ -70,74 +71,62 @@ After all producer threads finish and are joined by the main thread, the main th
 ### Performance metrics
 The program measures enqueue and dequeue timestamps for items and also reports average latency and overall throughput at the end of execution. here the assignment lists latency and throughput metrics as an optional bonus feature and asks for two runs with different buffer sizes for comparison. 
 
+## Priority Handling
+
+This implementation supports item priorities:
+- **Urgent items (priority 1):** Inserted in for a urgent buffer. Consumers always check and consume urgent items first(priority 1), maintaining FIFO order among urgent items.
+- **Normal items (priority 0):** Inserted in for a separate normal buffer. These are only consumed when no urgent items are present, also in FIFO order.
+- **Producer assignment:** Each item produced has a 25% chance of being urgent (priority 1) and 75% chance of being normal (priority 0).
+- **Poison pills:** Inserted as urgent items to guarantee prompt consumer termination.
+
+This design ensures that urgent work is always prioritized, while normal work is not starved and FIFO is preserved within each priority class.
+
+### Example Output (with priorities)
+```
+[Producer - 1] Produced the Item 42 (priority 1) at index 0
+[Producer - 2] Produced the Item 17 (priority 0) at index 0
+[Consumer - 1] Consumed the item 42 at index 0
+[Consumer - 1] Consumed the item 17 at index 0
+```
+Urgent items are always consumed before normal items, even if produced later.
+
 ## Output
 Run:
 ```text
 
---- Producer-Consumer Simulation ---
+=== Producer-Consumer Simulation ===
 Producers: 3, Consumers: 2, Buffer Size: 10
 Each producer will generate 20 items
------------------------------------------------------
+=====================================
 
-[Producer - 1] Produced the Item 30 at index 0
-[Producer - 1] Produced the Item 51 at index 1
-[Producer - 1] Produced the Item 66 at index 2
-[Producer - 1] Produced the Item 48 at index 3
-[Producer - 1] Produced the Item 78 at index 4
-[Producer - 1] Produced the Item 35 at index 5
-[Producer - 1] Produced the Item 81 at index 6
-[Producer - 1] Produced the Item 71 at index 7
-[Producer - 1] Produced the Item 64 at index 8
-[Producer - 1] Produced the Item 19 at index 9
-[Consumer - 1] Consumed the item 30 at index 0
-[Consumer - 1] Consumed the item 51 at index 1
-[Producer - 1] Produced the Item 53 at index 0
-[Producer - 3] Produced the Item 89 at index 1
-[Producer - 3] Produced the Item 31 at index 2
-[Consumer - 1] Consumed the item 66 at index 2
-[Producer - 2] Produced the Item 35 at index 3
-[Consumer - 1] Consumed the item 48 at index 3
-[Consumer - 1] Consumed the item 78 at index 4
-[Consumer - 1] Consumed the item 35 at index 5
+[Producer-1] Produced Item 27 at index 0
+[Producer-1] Produced Item 99 at index 1
+[Producer-1] Produced Item 26 at index 2
+[Producer-1] Produced Item 57 at index 3
+[Producer-1] Produced Item 56 at index 4
+[Producer-1] Produced Item 52 at index 5
+[Producer-1] Produced Item 81 at index 6
 ...
-[Consumer - 2] Consumed the item 29 at index 1
-[Producer - 2] Produced the Item 49 at index 0
-[Consumer - 1] Consumed the item 33 at index 1
-[Producer - 2] Produced the Item 33 at index 1
-[Consumer - 2] Consumed the item 38 at index 2
-[Producer - 2] Produced the Item 38 at index 2
-[Consumer - 1] Consumed the item 49 at index 3
-[Producer - 2] Produced the Item 49 at index 3
-[Consumer - 2] Consumed the item 78 at index 4
-[Producer - 2] Produced the Item 78 at index 4
-[Consumer - 1] Consumed the item 9 at index 5
-[Producer - 2] Produced the Item 9 at index 5
-[Consumer - 2] Consumed the item 9 at index 6
-[Producer - 2] Produced the Item 9 at index 6
-[Consumer - 1] Consumed the item 70 at index 7
-[Producer - 2] Produced the Item 70 at index 7
-[Consumer - 2] Consumed the item 2 at index 8
-[Producer - 2] Produced the Item 2 at index 8
-[Consumer - 1] Consumed the item 34 at index 9
-[Producer - 2] Produced the Item 34 at index 9
-[Producer - 2] Finished producing 20 items
+[Consumer-1] Consumed item 28 at index 7
+[Consumer-1] Consumed item 47 at index 8
+[Consumer-1] Consumed item 74 at index 9
 
---- All producers finished ---
-Inserting the 2 poison pills...
+=== All producers finished ===
+Inserting 2 poison pills...
 
-[Consumer - 1] Received the poison pill. Exiting
-[Consumer - 1] Finished consuming 33 items.
-[Consumer - 2] Received the poison pill. Exiting
-[Consumer - 2] Finished consuming 27 items.
+[Consumer-2] Received poison pill. Exiting.
+[Consumer-2] Finished consuming 30 items.
+[Consumer-1] Received poison pill. Exiting.
+[Consumer-1] Finished consuming 30 items.
 
---- Simulation Complete ---
+=== Simulation Complete ===
 Total items produced: 60
 Total items consumed: 60
 Expected items: 60
 
---- Latency Statistics ---
-Average latency: 0.140 ms
-Throughput: 27137.48 items/sec
+=== Latency Statistics ===
+Average latency: 0.031 ms
+Throughput: 175947.40 items/sec
 ```
 The exact item values, interleaving order, latency, and throughput will vary from run to run becuz thread scheduling and random number generation are nondeterministic.
 
@@ -174,4 +163,4 @@ gcc -o producer_consumer producer_consumer.c -pthread
 ```
 
 ## Summary of Deliverable
-This README covers all of da following: compilation, execution, testing, expected behavior, input parameters, and output examples, which are explicitly required in the deliverables section of the project handout. 
+This README covers all of da following: compilation, execution, testing, expected behavior, input parameters, and output examples, which are explicitly required in the deliverables section of the project handout.
