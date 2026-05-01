@@ -82,6 +82,7 @@ int insert_item(int item, int priority) {
 typedef struct {
     int item;
     int index;
+    int priority;
 } Removal_Result;
 
 // Removes item from buffer
@@ -92,6 +93,7 @@ Removal_Result remove_item() {
         pthread_mutex_lock(&mutex); // Locks the buffer to enter critical section
         result.item = cb_urgent.buffer[cb_urgent.out];
         result.index = cb_urgent.out;
+        result.priority = 1;
         cb_urgent.out = (cb_urgent.out + 1) % cb_urgent.size; // Ensures Circular Implementation
         clock_gettime(CLOCK_MONOTONIC, &cb_urgent.deq_time[result.index]); // Recording dequeue timestamp
         pthread_mutex_unlock(&mutex); // Unlocks buffer to exit critical section
@@ -103,6 +105,7 @@ Removal_Result remove_item() {
         pthread_mutex_lock(&mutex); // Locks the buffer to enter critical section
         result.item = cb_normal.buffer[cb_normal.out];
         result.index = cb_normal.out;
+        result.priority = 0;
         cb_normal.out = (cb_normal.out + 1) % cb_normal.size; // Ensures Circular Implementation
         clock_gettime(CLOCK_MONOTONIC, &cb_normal.deq_time[result.index]); // Recording dequeue timestamp
         pthread_mutex_unlock(&mutex); // Unlocks buffer to exit critical section
@@ -161,8 +164,9 @@ void *consumer(void *arg) {
         items_consumed++;
         
         // Calculates Latency
-        struct timespec enq = cb.enq_time[result.index];
-        struct timespec deq = cb.deq_time[result.index];
+        Circular_Buffer *cb = (result.priority == 1) ? &cb_urgent : &cb_normal;
+        struct timespec enq = cb->enq_time[result.index];
+        struct timespec deq = cb->deq_time[result.index];
 
         long sec = deq.tv_sec - enq.tv_sec;
         long nsec = deq.tv_nsec - enq.tv_nsec;
